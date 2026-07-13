@@ -1,36 +1,49 @@
-name: 每日自动更新汇率
+name: 每日自动更新乌克兰汇率
 on:
+  # 北京时间早上8点自动执行（UTC 0点）
   schedule:
-    - cron: "0 0 * * *" # UTC时间0点，国内早8点执行
+    - cron: "0 0 * * *"
+  # 支持手动点击按钮测试运行
   workflow_dispatch:
 
 jobs:
-  fetch-rate:
+  refresh-rate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: 安装Python
-        uses: actions/setup-python@v5
+      - name: 拉取仓库代码
+        uses: actions/checkout@v4
+
+      - name: 安装Node环境（用来爬实时汇率）
+        uses: actions/setup-node@v4
         with:
-          python-version: "3.11"
-      - name: 获取实时汇率并替换网页
+          node-version: 20
+
+      - name: 执行汇率替换脚本
         run: |
-          python3 - <<END
-          import requests,re,datetime
-          # 获取UAH兑CNY汇率
-          res = requests.get("https://api.exchangerate.host/latest?base=UAH&symbols=CNY")
-          rate = str(round(res.json()["rates"]["CNY"],4))
-          # 读取页面
-          html = open("index.html","r",encoding="utf-8").read()
-          # 替换汇率数字两处：JS变量 + 提示文字
-          html = re.sub(r'const uah2cny = [\d\.]+;',f'const uah2cny = {rate};',html)
-          html = re.sub(r'1 UAH = [\d\.]+ CNY',f'1 UAH = {rate} CNY',html)
-          open("index.html","w",encoding="utf-8").write(html)
-          END
-      - name: 提交更新
+          npm install node-fetch
+          node -e "
+          const fetch = require('node-fetch');
+          // 抓取格里夫纳UAH兑CNY实时汇率
+          fetch('https://api.exchangerate-api.com/v4/latest/UAH')
+            .then(r=>r.json())
+            .then(d=>{
+              const rate = d.rates.CNY.toFixed(4);
+              const fs = require('fs');
+              let html = fs.readFileSync('index.html','utf8');
+              // 替换页面文字 1 UAH = x.xxxx CNY
+              html = html.replace(/1 UAH = [0-9.]+ CNY/, \`1 UAH = \${rate} CNY\`);
+              fs.writeFileSync('index.html',html);
+              console.log('更新汇率成功：',rate);
+            })
+          "
+
+      - name: 配置Git提交账号
         run: |
-          git config --global user.name "AutoRateBot"
-          git config --global user.email "bot@github.com"
+          git config --global user.name "xiaoxin521666"
+          git config --global user.email "15308450587@163.com"
+
+      - name: 提交并推送汇率修改
+        run: |
           git add index.html
-          git commit -m "自动更新当日汇率"
+          git commit -m "自动更新当日UAH汇率"
           git push
