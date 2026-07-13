@@ -8,7 +8,12 @@ async function updateRate() {
     try {
         // 以UAH乌克兰格里夫纳为基准，直接获取UAH兑CNY汇率
         const url = `https://v6.exchangerate-api.com/v6/${API_KEY}/latest/UAH`;
-        const res = await axios.get(url, { timeout: 15000 });
+        const res = await axios.get(url, {
+            timeout: 20000,
+            headers: {
+                "User-Agent": "Mozilla/5.0 GitHub Actions Bot"
+            }
+        });
         const data = res.data;
 
         // 校验接口返回正常
