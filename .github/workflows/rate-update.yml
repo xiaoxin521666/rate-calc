@@ -1,15 +1,19 @@
 name: 定时更新汇率
 on:
   schedule:
-    - cron: '0 * * * *' # 每小时自动执行一次
-  workflow_dispatch: # 支持手动触发
+    - cron: '0 * * * *'
+  workflow_dispatch:
 
 jobs:
   update:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # 关键：授予读写仓库权限
     steps:
       - name: 拉取仓库代码
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }} # 内置授权令牌
       - name: 安装node环境
         uses: actions/setup-node@v4
         with:
