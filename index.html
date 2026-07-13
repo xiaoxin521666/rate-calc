@@ -64,7 +64,7 @@
             outline: none;
             border-color: #22a7ff;
         }
-        .btn-calc {
+        button {
             width: 100%;
             padding: 18px;
             background: linear-gradient(90deg, #22a7ff, #0091d6);
@@ -73,25 +73,6 @@
             color: white;
             font-size: 20px;
             cursor: pointer;
-            transition: opacity 0.2s;
-        }
-        .btn-calc:hover {
-            opacity: 0.9;
-        }
-        .btn-reset {
-            width: 100%;
-            padding: 14px;
-            margin-top: 14px;
-            background: #2c3a4e;
-            border: none;
-            border-radius: 14px;
-            color: #b1c4dd;
-            font-size: 18px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .btn-reset:hover {
-            background: #384860;
         }
         #result-box {
             margin-top: 26px;
@@ -116,17 +97,15 @@
 
         <div class="input-group">
             <label>单件购入成本（人民币）</label>
-            <!-- onfocus点击自动清空，回车计算 -->
-            <input type="text" id="buyPrice" value="" onfocus="this.value=''" oninput="filterNum(this)" onkeydown="enterCalc(event)">
+            <input type="text" id="buyPrice" value="2.57" oninput="filterNum(this)">
         </div>
 
         <div class="input-group">
             <label>Steam乌克兰区挂牌价（格里夫纳UAH）</label>
-            <input type="text" id="uahPrice" value="" onfocus="this.value=''" oninput="filterNum(this)" onkeydown="enterCalc(event)">
+            <input type="text" id="uahPrice" value="30.78" oninput="filterNum(this)">
         </div>
 
-        <button class="btn-calc" onclick="calc()">计算比值</button>
-        <button class="btn-reset" onclick="resetAll()">一键清空全部</button>
+        <button onclick="calc()">计算比值</button>
 
         <div id="result-box">
             <div class="result-text" id="output">——</div>
@@ -134,25 +113,17 @@
     </div>
 
 <script>
-    // 【自动更新标记】此处数字会由GitHub机器人每小时自动替换
+    // 【自动更新标记】此处数字会由GitHub机器人每日自动替换
     const uah2cny = 0.1523;
 
-    // 修改：允许多个小数点，仅过滤字母符号，不限制小数点数量
     function filterNum(input) {
-        // 只保留数字和小数点，其他字符全部清除
         input.value = input.value.replace(/[^\d.]/g, "");
-    }
-
-    // 回车触发计算
-    function enterCalc(e) {
-        if(e.key === "Enter") calc();
-    }
-
-    // 一键清空所有输入与结果
-    function resetAll() {
-        document.getElementById("buyPrice").value = "";
-        document.getElementById("uahPrice").value = "";
-        document.getElementById("output").innerText = "——";
+        let dotPos = input.value.indexOf('.');
+        if (dotPos !== -1) {
+            let int = input.value.slice(0, dotPos);
+            let dec = input.value.slice(dotPos + 1, dotPos + 4);
+            input.value = int + "." + dec;
+        }
     }
 
     function calc() {
@@ -167,4 +138,11 @@
         const sellerIncome = originalRmb * 0.87;
         const discountPercent = (buyCost / sellerIncome * 100).toFixed(2);
 
-    
+        let text = `乌克兰标价折合人民币：${originalRmb.toFixed(2)} 元\n`;
+        text += `扣除13%手续费卖家到手：${sellerIncome.toFixed(2)} 元\n`;
+        text += `当前拿货折算折扣：${discountPercent} 折`;
+        document.getElementById('output').innerText = text;
+    }
+</script>
+</body>
+</html>
