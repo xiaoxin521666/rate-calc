@@ -3,9 +3,13 @@ const fs = require('fs');
 
 async function getRate() {
   try {
-    // 免密钥公共汇率接口
-    const res = await axios.get('https://api.exchangerate.host/latest?base=UAH&symbols=CNY');
-    const rate = res.data.rates.CNY.toFixed(4);
+    // 改为基准货币CNY，获取UAH汇率，数据结构稳定
+    const res = await axios.get('https://api.exchangerate.host/latest?base=CNY&symbols=UAH', {
+      timeout: 10000
+    });
+    // 1人民币等于多少UAH，反向换算1UAH兑CNY
+    const oneCnyToUah = res.data.rates.UAH;
+    const rate = (1 / oneCnyToUah).toFixed(4);
     console.log("汇率：1 UAH =", rate, "CNY");
     
     let html = fs.readFileSync('index.html','utf8');
