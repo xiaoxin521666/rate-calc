@@ -1,0 +1,30 @@
+name: 自动更新汇率
+on:
+  schedule:
+    - cron: '0 0 * * *' # UTC0点=北京时间早8点，每日自动执行
+  workflow_dispatch: # 支持手动一键运行
+
+jobs:
+  update-rate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 拉取仓库代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: 配置Git提交账号
+        run: |
+          git config --global user.name "xiaoxin521666"
+          git config --global user.email "15308450587@163.com"
+      - name: 安装Node.js环境
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: 执行汇率更新脚本
+        run: node updateRate.js
+      - name: 提交并推送汇率修改
+        run: |
+          git add .
+          git diff --quiet && git diff --staged --quiet || git commit -m "自动更新乌克兰格里夫纳兑人民币汇率"
+          git push
