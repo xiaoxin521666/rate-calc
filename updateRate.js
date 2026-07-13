@@ -11,7 +11,7 @@ async function getRate() {
     
     // 读取你的页面
     let html = fs.readFileSync('index.html','utf8');
-    // 替换页面内汇率数字（你页面里写汇率的地方）
+    // 替换页面内汇率数字（页面文本格式：UAH兑人民币: 0.xxxx）
     html = html.replace(/UAH兑人民币: [0-9.]+/g, `UAH兑人民币: ${rate.toFixed(4)}`);
     fs.writeFileSync('index.html', html);
   } catch(e) {
