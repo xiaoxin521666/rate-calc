@@ -2,7 +2,7 @@ name: 自动更新汇率
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 0 * * *'
+    - cron: '0 * * * *' # 每小时UTC整点 = 北京时间每小时整点更新
 
 # 关键配置：给流程授予仓库读写权限
 permissions:
@@ -19,7 +19,7 @@ jobs:
           # 自带token用于提交推送
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: 配置Node24
+      - name: 配置Node20
         uses: actions/setup-node@v4
         with:
           node-version: 20
