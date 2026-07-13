@@ -3,13 +3,18 @@ const fs = require('fs');
 
 async function getRate() {
   try {
-    const res = await axios.get('https://v6.exchangerate-api.com/v6/latest/UAH');
-    const rate = res.data.rates.CNY;
-    console.log("汇率：1UAH =", rate, "CNY");
+    // 免密钥公共汇率接口
+    const res = await axios.get('https://api.exchangerate.host/latest?base=UAH&symbols=CNY');
+    const rate = res.data.rates.CNY.toFixed(4);
+    console.log("汇率：1 UAH =", rate, "CNY");
     
     let html = fs.readFileSync('index.html','utf8');
-    html = html.replace(/UAH兑人民币: [0-9.]+/g, `UAH兑人民币: ${rate.toFixed(4)}`);
-    fs.writeFileSync('index.html', html);
+    // 替换页面展示文字
+    html = html.replace(/今日自动更新汇率：1 UAH = [0-9.]+ CNY/g, `今日自动更新汇率：1 UAH = ${rate} CNY`);
+    // 替换JS计算变量
+    html = html.replace(/const uah2cny = [0-9.]+;/g, `const uah2cny = ${rate};`);
+
+    fs.writeFileSync('index.html', html, 'utf8');
   } catch(e) {
     console.error("执行失败：", e);
     process.exit(1);
