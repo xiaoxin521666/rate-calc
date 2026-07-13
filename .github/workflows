@@ -1,0 +1,36 @@
+name: 每日自动更新汇率
+on:
+  schedule:
+    - cron: "0 0 * * *" # UTC时间0点，国内早8点执行
+  workflow_dispatch:
+
+jobs:
+  fetch-rate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 安装Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: 获取实时汇率并替换网页
+        run: |
+          python3 - <<END
+          import requests,re,datetime
+          # 获取UAH兑CNY汇率
+          res = requests.get("https://api.exchangerate.host/latest?base=UAH&symbols=CNY")
+          rate = str(round(res.json()["rates"]["CNY"],4))
+          # 读取页面
+          html = open("index.html","r",encoding="utf-8").read()
+          # 替换汇率数字两处：JS变量 + 提示文字
+          html = re.sub(r'const uah2cny = [\d\.]+;',f'const uah2cny = {rate};',html)
+          html = re.sub(r'1 UAH = [\d\.]+ CNY',f'1 UAH = {rate} CNY',html)
+          open("index.html","w",encoding="utf-8").write(html)
+          END
+      - name: 提交更新
+        run: |
+          git config --global user.name "AutoRateBot"
+          git config --global user.email "bot@github.com"
+          git add index.html
+          git commit -m "自动更新当日汇率"
+          git push
