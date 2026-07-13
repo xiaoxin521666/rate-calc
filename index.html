@@ -59,30 +59,20 @@
             background: #1e2633;
             color: #fff;
             font-size: 24px;
-            transition: all 0.25s ease;
         }
         input:focus {
             outline: none;
             border-color: #22a7ff;
-            box-shadow: 0 0 0 4px rgba(102, 192, 244, 0.15);
-            background: #232d3b;
         }
         button {
             width: 100%;
             padding: 18px;
-            margin-top: 6px;
             background: linear-gradient(90deg, #22a7ff, #0091d6);
             border: none;
             border-radius: 14px;
             color: white;
             font-size: 20px;
-            font-weight: 500;
             cursor: pointer;
-            transition: opacity 0.2s;
-        }
-        button:active {
-            opacity: 0.85;
-            transform: scale(0.98);
         }
         #result-box {
             margin-top: 26px;
@@ -103,7 +93,7 @@
 <body>
     <div class="card">
         <h2>倒余额计算器</h2>
-        <div class="rate-tip" id="rateTip">正在自动拉取实时汇率...</div>
+        <div class="rate-tip" id="rateTip">今日自动更新汇率：1 UAH = 0.1517 CNY</div>
 
         <div class="input-group">
             <label>单件购入成本（人民币）</label>
@@ -123,44 +113,36 @@
     </div>
 
 <script>
-    // 兜底汇率：1UAH≈0.1517CNY
-    let uah2cny = 0.1517;
-    const tipDom = document.getElementById('rateTip');
+    // 【自动更新标记】此处数字会由GitHub机器人每日自动替换
+    const uah2cny = 0.1517;
 
-    // 页面加载自动获取实时汇率
-    window.onload = getRealTimeRate;
-
-    // 获取国内可直连实时汇率接口
-    async function getRealTimeRate() {
-        try {
-            // 国内无跨域免费汇率接口，直连无需代理
-            const res = await fetch("https://api.exchangerate.host/latest?base=UAH&symbols=CNY");
-            const data = await res.json();
-            // 实时 1格里夫纳 兑换人民币数值
-            uah2cny = data.rates.CNY;
-            tipDom.innerText = `✅ 实时汇率：1 UAH = ${uah2cny.toFixed(4)} CNY`;
-            // 缓存汇率，24小时复用
-            localStorage.setItem('rateCache', JSON.stringify({
-                val: uah2cny,
-                time: Date.now()
-            }));
-        } catch (err) {
-            // 接口失败读取本地缓存
-            const cacheStr = localStorage.getItem('rateCache');
-            if (cacheStr) {
-                const cache = JSON.parse(cacheStr);
-                uah2cny = cache.val;
-                tipDom.innerText = `⚠️ 联网失败，使用缓存汇率：1 UAH = ${uah2cny.toFixed(4)} CNY`;
-            } else {
-                tipDom.innerText = `❌ 无法获取汇率，使用固定参考：1 UAH = ${uah2cny} CNY`;
-            }
-        }
-    }
-
-    // 输入框仅允许数字和小数点
     function filterNum(input) {
         input.value = input.value.replace(/[^\d.]/g, "");
         let dotPos = input.value.indexOf('.');
         if (dotPos !== -1) {
             let int = input.value.slice(0, dotPos);
-            let dec = input.value.slice(dotPos + 1, dot
+            let dec = input.value.slice(dotPos + 1, dotPos + 4);
+            input.value = int + "." + dec;
+        }
+    }
+
+    function calc() {
+        const buyCost = Number(document.getElementById('buyPrice').value);
+        const uahTag = Number(document.getElementById('uahPrice').value);
+
+        if (!buyCost || buyCost <= 0 || !uahTag || uahTag <= 0) {
+            document.getElementById('output').innerText = "请输入有效的价格数字";
+            return;
+        }
+        const originalRmb = uahTag * uah2cny;
+        const sellerIncome = originalRmb * 0.87;
+        const discountPercent = (buyCost / sellerIncome * 100).toFixed(2);
+
+        let text = `乌克兰标价折合人民币：${originalRmb.toFixed(2)} 元\n`;
+        text += `扣除13%手续费卖家到手：${sellerIncome.toFixed(2)} 元\n`;
+        text += `当前拿货折算折扣：${discountPercent} 折`;
+        document.getElementById('output').innerText = text;
+    }
+</script>
+</body>
+</html>
