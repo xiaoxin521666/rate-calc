@@ -1,8 +1,8 @@
 name: 自动更新汇率
 on:
-  workflow_dispatch: # 手动触发
+  workflow_dispatch:
   schedule:
-    - cron: '0 0 * * *' # UTC0点=北京时间8点每日执行
+    - cron: '0 0 * * *'
 
 jobs:
   update-frequency:
@@ -12,24 +12,23 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      
-      - name: 配置Node.js
+
+      - name: 配置Node24
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-      
-      - name: 初始化依赖
+          node-version: 24
+
+      - name: 安装axios依赖
         run: |
           npm init -y
-          npm install axios
-      
-      - name: 执行汇率脚本
+          npm install axios --save
+
+      - name: 运行汇率更新脚本
         run: node updateRate.js
-      
-      - name: 提交更新文件
+
+      - name: 提交修改
         run: |
           git config --global user.name "xiaoxin521666"
           git config --global user.email "15308450587@163.com"
           git add index.html
-          git commit -m "自动更新乌克兰兑人民币汇率"
-          git push
+          git diff --quiet && git diff --staged --quiet || (git commit -m "自动更新汇率" && git push)
