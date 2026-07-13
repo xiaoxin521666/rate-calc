@@ -1,30 +1,28 @@
 const axios = require('axios');
 const fs = require('fs');
 
-// 你的ExchangeRate-API密钥
-const API_KEY = "06eeef79e5d09c416e10ce2a";
-
 async function updateRate() {
     try {
-        // 以UAH乌克兰格里夫纳为基准，直接获取UAH兑CNY汇率
-        const url = `https://v6.exchangerate-api.com/v6/${API_KEY}/latest/UAH`;
+        // 中行公开汇率接口
+        const url = "https://www.boc.cn/sourcedb/whpj/index.html";
         const res = await axios.get(url, { timeout: 15000 });
-        const data = res.data;
+        let htmlText = res.data;
 
-        // 校验接口返回正常
-        if (data.result !== "success" || !data.conversion_rates?.CNY) {
-            throw new Error("接口未返回CNY人民币汇率");
-        }
+        // 匹配乌克兰格里夫纳UAH现汇卖出价（中行单位：100外币兑人民币）
+        const reg = /乌克兰格里夫纳.*?<td>([\d.]+)<\/td>/s;
+        const match = htmlText.match(reg);
+        if (!match) throw new Error("未抓取到乌克兰格里夫纳汇率");
 
-        // 1乌克兰格里夫纳 = 对应人民币，保留4位小数
-        const uahToCny = Number(data.conversion_rates.CNY.toFixed(4));
+        // 换算：100UAH = match[1]元人民币，除以100得到1UAH价格
+        const hundredUahCny = parseFloat(match[1]);
+        const uahToCny = Number((hundredUahCny / 100).toFixed(4));
         console.log(`实时汇率：1 UAH = ${uahToCny} CNY`);
 
-        // 读取网页并替换汇率文本
-        let html = fs.readFileSync("index.html", "utf8");
-        html = html.replace(/今日自动更新汇率：1 UAH = [0-9.]+ CNY/g, `今日自动更新汇率：1 UAH = ${uahToCny} CNY`);
-        html = html.replace(/const uah2cny = [0-9.]+;/g, `const uah2cny = ${uahToCny};`);
-        fs.writeFileSync("index.html", html, "utf8");
+        // 替换网页两处汇率文本
+        let pageHtml = fs.readFileSync("index.html", "utf8");
+        pageHtml = pageHtml.replace(/今日自动更新汇率：1 UAH = [0-9.]+ CNY/g, `今日自动更新汇率：1 UAH = ${uahToCny} CNY`);
+        pageHtml = pageHtml.replace(/const uah2cny = [0-9.]+;/g, `const uah2cny = ${uahToCny};`);
+        fs.writeFileSync("index.html", pageHtml, "utf8");
 
         console.log("汇率更新完成，已写入index.html");
     } catch (err) {
