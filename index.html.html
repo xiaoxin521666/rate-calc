@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>倒余额计算器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, Microsoft Yahei, sans-serif;
+        }
+        body {
+            min-height: 100vh;
+            background: linear-gradient(145deg, #101828, #1f2c48);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+        .card {
+            background-color: #151b24;
+            width: 100%;
+            max-width: 480px;
+            padding: 32px 24px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
+            border: 1px solid #2c3e50;
+        }
+        h2 {
+            color: #ffffff;
+            text-align: center;
+            margin-bottom: 12px;
+            font-size: 26px;
+            letter-spacing: 1px;
+            font-weight: 500;
+        }
+        .rate-tip {
+            color:#94a3b8;
+            font-size:14px;
+            margin-bottom:30px;
+            text-align: center;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            color: #e2e8f0;
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+        input {
+            width: 100%;
+            padding: 16px 18px;
+            border-radius: 14px;
+            border: 1px solid #3d4f61;
+            background: #1e2633;
+            color: #fff;
+            font-size: 24px;
+            transition: all 0.25s ease;
+        }
+        input:focus {
+            outline: none;
+            border-color: #22a7ff;
+            box-shadow: 0 0 0 4px rgba(102, 192, 244, 0.15);
+            background: #232d3b;
+        }
+        button {
+            width: 100%;
+            padding: 18px;
+            margin-top: 6px;
+            background: linear-gradient(90deg, #22a7ff, #0091d6);
+            border: none;
+            border-radius: 14px;
+            color: white;
+            font-size: 20px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        button:active {
+            opacity: 0.85;
+            transform: scale(0.98);
+        }
+        #result-box {
+            margin-top: 26px;
+            padding: 20px;
+            background: linear-gradient(135deg, #1e2936, #273646);
+            border-radius: 14px;
+            text-align: center;
+        }
+        .result-text {
+            color: #66c0f4;
+            font-size: 22px;
+            font-weight: bold;
+            line-height: 1.6;
+            white-space: pre-line;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>倒余额计算器</h2>
+        <div class="rate-tip" id="rateTip">正在自动获取当日实时汇率...</div>
+
+        <div class="input-group">
+            <label>单件购入成本（人民币）</label>
+            <input type="text" id="buyPrice" placeholder="" value="2.57" oninput="onlyNumberDot(this)">
+        </div>
+
+        <div class="input-group">
+            <label>Steam乌克兰区挂牌价（格里夫纳UAH）</label>
+            <input type="text" id="uahPrice" placeholder="" value="30.78" oninput="onlyNumberDot(this)">
+        </div>
+
+        <button onclick="calcRatio()">计算比值</button>
+
+        <div id="result-box">
+            <div class="result-text" id="ratioOutput">——</div>
+        </div>
+    </div>
+
+<script>
+    // 联网失败兜底备用汇率（新浪基准）
+    const DEFAULT_RATE = 0.1517;
+    // 汇率缓存24小时
+    const CACHE_EXPIRE = 24 * 60 * 60 * 1000;
+    let currentRate = DEFAULT_RATE;
+
+    window.onload = async function () {
+        await loadExchangeRate();
+    }
+
+    // 自动拉取实时汇率，缓存24小时，次日打开自动更新
+    async function loadExchangeRate() {
+        const tipDom = document.getElementById('rateTip');
+        const cacheStr = localStorage.getItem('uah_rate_cache');
+
+        // 读取本地缓存，未过期直接复用
+        if (cacheStr) {
+            const cache = JSON.parse(cacheStr);
+            const now = Date.now();
+            if (now - cache.time < CACHE_EXPIRE) {
+                currentRate = cache.rate;
+                tipDom.innerText = `实时汇率(今日缓存)：1格里夫纳 = ${currentRate} CNY，次日自动刷新`;
+                return;
+            }
+        }
+
+        // 缓存过期，请求免费国际汇率接口
+        try {
+            const res = await fetch('https://api.exchangerate-api.com/v4/latest/UAH');
+            const data = await res.json();
+            const cnyRate = data.rates.CNY;
+            currentRate = cnyRate;
+            // 存入本地缓存
+            localStorage.setItem('uah_rate_cache', JSON.stringify({
+                rate: cnyRate,
+                time: Date.now()
+            }));
+            tipDom.innerText = `今日实时自动汇率：1格里夫纳 = ${cnyRate} 人民币`;
+        } catch (err) {
+            // 网络/跨域报错自动切换备用汇率，不会卡死
+            currentRate = DEFAULT_RATE;
+            tipDom.innerText = `联网获取汇率失败，
