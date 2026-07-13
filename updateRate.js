@@ -9,27 +9,33 @@ async function getExchangeRate() {
     if (!rates || typeof rates.CNY !== "number" || isNaN(rates.CNY)) {
         throw new Error("汇率接口数据异常，终止运行，不修改页面");
     }
-    const midRate = Number(rates.CNY.toFixed(4));
-    const spreadFactor = 0.1513 / midRate;
-    const phoneLikeRate = Number((midRate * spreadFactor).toFixed(4));
-    return { midRate, phoneLikeRate };
+    // 直接取实时原始汇率，无任何系数、无保底
+    const realRate = Number(rates.CNY.toFixed(4));
+    return realRate;
 }
 
 async function refreshHtmlRate() {
-    // 先完整读取页面，网络报错直接退出，原文件不改动
     const originHtml = fs.readFileSync("./index.html", "utf8");
-    const { midRate, phoneLikeRate } = await getExchangeRate();
+    const realRate = await getExchangeRate();
 
-    // 替换页面展示文字
+    // 提取页面当前旧汇率
+    const oldRateMatch = originHtml.match(/const uah2cny = ([0-9.]+);/);
+    const oldRate = oldRateMatch ? Number(oldRateMatch[1]) : 0;
+
+    // 汇率无变化，直接退出，不修改文件
+    if (oldRate === realRate) {
+        console.log(`实时汇率无变化(${realRate})，无需更新页面`);
+        return;
+    }
+
+    // 替换页面展示文字与计算变量
     let newHtml = originHtml.replace(/今日自动更新汇率：1UAH = [0-9.]+ CNY/g,
-        `今日自动更新汇率：1UAH = ${phoneLikeRate} CNY`);
-    // 替换计算用汇率变量
+        `今日自动更新汇率：1UAH = ${realRate} CNY`);
     newHtml = newHtml.replace(/const uah2cny = [0-9.]+;/g,
-        `const uah2cny = ${phoneLikeRate};`);
+        `const uah2cny = ${realRate};`);
 
-    // 全部处理完成再写入文件
     fs.writeFileSync("./index.html", newHtml, "utf-8");
-    console.log(`更新完成，对齐手机汇率：1 UAH = ${phoneLikeRate} CNY`);
+    console.log(`更新完成，实时汇率：1 UAH = ${realRate} CNY`);
 }
 
 refreshHtmlRate();
