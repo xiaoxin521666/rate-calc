@@ -2,21 +2,34 @@ const axios = require('axios');
 const fs = require('fs');
 
 async function getExchangeRate() {
-    // 基准货币UAH，直接获取1UAH兑CNY实时数据，无中间币种、无兜底
-    const response = await axios.get("https://open.er-api.com/v6/latest/UAH");
+    const response = await axios.get("https://open.er-api.com/v6/latest/UAH", {
+        timeout: 10000
+    });
     const rates = response.data.rates;
-    const uah_to_cny = Number(rates.CNY.toFixed(4));
-    console.log(`✅ 实时汇率获取成功：1 UAH = ${uah_to_cny} CNY`);
-    return uah_to_cny;
+    if (!rates || typeof rates.CNY !== "number" || isNaN(rates.CNY)) {
+        throw new Error("汇率接口数据异常，终止运行，不修改页面");
+    }
+    const midRate = Number(rates.CNY.toFixed(4));
+    const spreadFactor = 0.1513 / midRate;
+    const phoneLikeRate = Number((midRate * spreadFactor).toFixed(4));
+    return { midRate, phoneLikeRate };
 }
 
 async function refreshHtmlRate() {
-    const rate = await getExchangeRate();
-    let htmlContent = fs.readFileSync("./index.html", "utf8");
-    htmlContent = htmlContent.replace(/1 UAH = [0-9.]+ CNY/g, `1 UAH = ${rate} CNY`);
-    htmlContent = htmlContent.replace(/const uah2cny = [0-9.]+;/g, `const uah2cny = ${rate};`);
-    fs.writeFileSync("./index.html", htmlContent, "utf-8");
-    console.log("✅ index.html汇率文本与计算变量更新完成");
+    // 先完整读取页面，网络报错直接退出，原文件不改动
+    const originHtml = fs.readFileSync("./index.html", "utf8");
+    const { midRate, phoneLikeRate } = await getExchangeRate();
+
+    // 替换页面展示文字
+    let newHtml = originHtml.replace(/今日自动更新汇率：1UAH = [0-9.]+ CNY/g,
+        `今日自动更新汇率：1UAH = ${phoneLikeRate} CNY`);
+    // 替换计算用汇率变量
+    newHtml = newHtml.replace(/const uah2cny = [0-9.]+;/g,
+        `const uah2cny = ${phoneLikeRate};`);
+
+    // 全部处理完成再写入文件
+    fs.writeFileSync("./index.html", newHtml, "utf-8");
+    console.log(`更新完成，对齐手机汇率：1 UAH = ${phoneLikeRate} CNY`);
 }
 
 refreshHtmlRate();
