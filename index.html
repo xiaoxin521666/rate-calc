@@ -103,64 +103,64 @@
 <body>
     <div class="card">
         <h2>倒余额计算器</h2>
-        <div class="rate-tip" id="rateTip">正在自动获取国内实时汇率...</div>
+        <div class="rate-tip" id="rateTip">正在自动拉取实时汇率...</div>
 
         <div class="input-group">
             <label>单件购入成本（人民币）</label>
-            <input type="text" id="buyPrice" value="2.57" oninput="onlyNumberDot(this)">
+            <input type="text" id="buyPrice" value="2.57" oninput="filterNum(this)">
         </div>
 
         <div class="input-group">
             <label>Steam乌克兰区挂牌价（格里夫纳UAH）</label>
-            <input type="text" id="uahPrice" value="30.78" oninput="onlyNumberDot(this)">
+            <input type="text" id="uahPrice" value="30.78" oninput="filterNum(this)">
         </div>
 
-        <button onclick="calcRatio()">计算比值</button>
+        <button onclick="calc()">计算比值</button>
 
         <div id="result-box">
-            <div class="result-text" id="ratioOutput">——</div>
+            <div class="result-text" id="output">——</div>
         </div>
     </div>
 
 <script>
-    // 网络异常兜底汇率（1格里夫纳≈0.1517人民币）
-    let baseRate = 0.1517;
-    const rateTipDom = document.getElementById('rateTip');
+    // 兜底汇率：1UAH≈0.1517CNY
+    let uah2cny = 0.1517;
+    const tipDom = document.getElementById('rateTip');
 
-    window.onload = async function () {
-        await getCNRate();
-    }
+    // 页面加载自动获取实时汇率
+    window.onload = getRealTimeRate;
 
-    // 国内可直连汇率接口，无需翻墙
-    async function getCNRate() {
+    // 获取国内可直连实时汇率接口
+    async function getRealTimeRate() {
         try {
-            // 国内公开无跨域限制汇率接口
-            const res = await fetch('https://api.waihui123.com/reteapi?action=all');
+            // 国内无跨域免费汇率接口，直连无需代理
+            const res = await fetch("https://api.exchangerate.host/latest?base=UAH&symbols=CNY");
             const data = await res.json();
-            // UAH 乌克兰格里夫纳兑人民币汇率
-            const uahToCny = data.data.UAH_CNY;
-            baseRate = Number(uahToCny);
-            rateTipDom.innerText = `实时汇率：1格里夫纳 ≈ ${baseRate.toFixed(4)} 人民币`;
-            // 本地缓存汇率，24小时内不再重复请求
-            localStorage.setItem('local_uah_rate', JSON.stringify({
-                rate: baseRate,
+            // 实时 1格里夫纳 兑换人民币数值
+            uah2cny = data.rates.CNY;
+            tipDom.innerText = `✅ 实时汇率：1 UAH = ${uah2cny.toFixed(4)} CNY`;
+            // 缓存汇率，24小时复用
+            localStorage.setItem('rateCache', JSON.stringify({
+                val: uah2cny,
                 time: Date.now()
             }));
         } catch (err) {
-            // 读取本地缓存汇率，无缓存则使用兜底固定值
-            const cache = localStorage.getItem('local_uah_rate');
-            if (cache) {
-                const cacheData = JSON.parse(cache);
-                baseRate = cacheData.rate;
-                rateTipDom.innerText = `缓存汇率：1格里夫纳 ≈ ${baseRate.toFixed(4)} 人民币（联网失败）`;
+            // 接口失败读取本地缓存
+            const cacheStr = localStorage.getItem('rateCache');
+            if (cacheStr) {
+                const cache = JSON.parse(cacheStr);
+                uah2cny = cache.val;
+                tipDom.innerText = `⚠️ 联网失败，使用缓存汇率：1 UAH = ${uah2cny.toFixed(4)} CNY`;
             } else {
-                rateTipDom.innerText = `联网获取汇率失败，使用参考汇率：1格里夫纳 ≈ ${baseRate} 人民币`;
+                tipDom.innerText = `❌ 无法获取汇率，使用固定参考：1 UAH = ${uah2cny} CNY`;
             }
         }
     }
 
-    // 输入框限制仅数字和小数点
-    function onlyNumberDot(input) {
-        let val = input.value.replace(/[^\d.]/g, "");
-        const dotIndex = val.indexOf('.');
-        if (dotIndex !== 
+    // 输入框仅允许数字和小数点
+    function filterNum(input) {
+        input.value = input.value.replace(/[^\d.]/g, "");
+        let dotPos = input.value.indexOf('.');
+        if (dotPos !== -1) {
+            let int = input.value.slice(0, dotPos);
+            let dec = input.value.slice(dotPos + 1, dot
