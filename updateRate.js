@@ -3,15 +3,15 @@ const fs = require('fs');
 
 async function getRate() {
   try {
-    const res = await axios.get('https://api.exchangerate-api.com/v4/latest/UAH');
+    const res = await axios.get('https://v6.exchangerate-api.com/v6/latest/UAH');
     const rate = res.data.rates.CNY;
-    console.log("当前1乌克兰格里夫纳 =", rate, "人民币");
+    console.log("汇率：1UAH =", rate, "CNY");
     
     let html = fs.readFileSync('index.html','utf8');
     html = html.replace(/UAH兑人民币: [0-9.]+/g, `UAH兑人民币: ${rate.toFixed(4)}`);
     fs.writeFileSync('index.html', html);
   } catch(e) {
-    console.error("汇率获取失败", e);
+    console.error("执行失败：", e);
     process.exit(1);
   }
 }
