@@ -26,7 +26,7 @@ jobs:
 
       - name: 提交修改
         run: |
-          git config user.name "小新521666"
-          git config user.email "填你GitHub邮箱"
+          git config user.name "xiaoxin521666"
+          git config user.email "15308450587@163.com"
           git add index.html
           git diff --quiet && git diff --staged --quiet || (git commit -m "自动更新UAH汇率" && git push)
